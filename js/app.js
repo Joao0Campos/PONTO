@@ -166,7 +166,8 @@
     else if (!C.util(k)) st = 'Fim de semana';
     else st = 'Sem marcação hoje';
     $('status').textContent = st;
-    $('hProg').textContent = v ? hm(w) + ' de ' + hm(v) : hm(w) + ' trabalhadas';
+    const alm = open ? C.almocoAuto(state, k, now) : 0;
+    $('hProg').textContent = (v ? hm(w) + ' de ' + hm(v) : hm(w) + ' trabalhadas') + (alm ? ' · almoço de ' + durHM(alm) + ' descontado' : '');
     const frac = v ? Math.min(1, w / v) : (w > 0 ? 1 : 0), anel = $('anel');
     $('anelProg').style.strokeDashoffset = (CIRC * (1 - frac)).toFixed(2);
     anel.classList.toggle('cheio', v > 0 && w >= v);

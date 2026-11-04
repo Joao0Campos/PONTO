@@ -221,9 +221,9 @@
   }
 
   /** Minutos trabalhados. Par aberto conta até `agora` só no dia aberto atual (hoje ou virada < 16 h). */
-  function trabalhado(s, k, agora) {
+  function bruto(s, k, agora) {
     const x = getDia(s, k);
-    if (!x || !x.p || !x.p.length) return 0;
+    if (!x || !x.p || !x.p.length) return { x, t: 0, contaAberto: false };
     const now = agora ? new Date(agora) : null, contaAberto = !!now && x.p.length % 2 === 1 && diaAberto(s, now) === k;
     let t = 0;
     for (let i = 0; i < x.p.length; i += 2) {
@@ -231,8 +231,20 @@
       const b = x.p[i + 1] ? new Date(x.p[i + 1]) : (contaAberto ? now : null);
       if (b) t += (b - a) / 6e4;
     }
-    if (x.p.length === 2 && util(k) && !x.tipo && t > 360) t -= x.banco ? 60 : 90; // só entrada/saída: desconta almoço
-    return Math.max(0, Math.round(t));
+    return { x, t, contaAberto };
+  }
+
+  /** Almoço descontado automaticamente (min): só entrada/saída, ou só a entrada com o dia aberto ("se sair agora"). */
+  function almocoAuto(s, k, agora) {
+    const { x, t, contaAberto } = bruto(s, k, agora);
+    if (!x || !x.p) return 0;
+    const soEntradaSaida = x.p.length === 2 || (x.p.length === 1 && contaAberto);
+    return soEntradaSaida && util(k) && !x.tipo && t > 360 ? (x.banco ? 60 : 90) : 0;
+  }
+
+  function trabalhado(s, k, agora) {
+    const { t } = bruto(s, k, agora);
+    return Math.max(0, Math.round(t - almocoAuto(s, k, agora)));
   }
 
   /** saldo do dia = trabalhado − previsto + ajuste */
@@ -471,7 +483,7 @@
     ultimoDiaComMarcacao, ultimoDiaImpar, diaAberto, pendentes, destinoBatida, mesclarDia, decidirBatida, removerUltima, LIMITE_ABERTO,
     validarBackup, mesclarMeses, estavel,
     pascoa, nomeFeriado, feriado, feriadoAuto,
-    previsto, trabalhado, saldoDia, inicio, contaNoSaldo, resumo, mesesDoBanco, total,
+    previsto, almocoAuto, trabalhado, saldoDia, inicio, contaNoSaldo, resumo, mesesDoBanco, total,
     parseHM, formatHM, formatHMsinal, diasEntre, nomeMarcacao, horariosDoDia, montarMarcacoes
   };
 });
