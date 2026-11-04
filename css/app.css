@@ -1,7 +1,7 @@
 /* Ponto VIC — visual "liquid glass" VIC (laranja #F07D00), claro e escuro. Sem fontes externas. */
 
 /* ---------- tokens ---------- */
-:root{
+:root{--logo-vic:url(../img/vic-logo.png);--logo-marca-fundo:#fff;
   color-scheme:light;
   --acc:#F07D00;            /* marca: preenchimentos, anel, foco */
   --acc-tx:#A84A00;         /* laranja para TEXTO sobre fundo claro (AA 5,2:1) */
@@ -18,7 +18,7 @@
   --r:22px; --nav-h:64px; --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
   --rapido:.18s; --font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
 }
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--logo-vic:url(../img/vic-logo-escuro.png);--logo-marca-fundo:#2b231d;
   color-scheme:dark;
   --acc-tx:#FF9F45; --sai-a:#4a4038; --sai-b:#2e2722;
   --bg:#0d0b09; --tx:#f4efe9; --mut:#b3a89c;
@@ -28,7 +28,7 @@
   --sheet:rgba(24,21,18,.98); --sombra:0 10px 34px rgba(0,0,0,.5); --brilho:inset 0 1px 0 rgba(255,255,255,.07);
   --g1:rgba(240,125,0,.22); --g2:rgba(255,150,40,.12); --g3:rgba(200,80,0,.16); --trilho:rgba(255,159,69,.14);
 }}
-:root[data-theme="dark"]{
+:root[data-theme="dark"]{--logo-vic:url(../img/vic-logo-escuro.png);--logo-marca-fundo:#2b231d;
   color-scheme:dark;
   --acc-tx:#FF9F45; --sai-a:#4a4038; --sai-b:#2e2722;
   --bg:#0d0b09; --tx:#f4efe9; --mut:#b3a89c;
@@ -103,8 +103,8 @@ input[type=time],input[type=date]{font-variant-numeric:tabular-nums}
 .marca{display:flex;align-items:center;gap:10px;min-width:0}
 .logo{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.22)}
 .logo svg{width:24px;height:24px}
-.logo{background:#fff;overflow:hidden;box-shadow:0 1px 3px rgba(120,50,0,.25)}.logo img{width:40px;height:40px;display:block}
-.logo-vic{background:#fff;border-radius:14px;padding:14px 18px;margin-bottom:12px;display:flex;justify-content:center}.logo-vic img{width:100%;max-width:260px;height:auto;display:block}
+.logo{background:var(--logo-marca-fundo) url(../img/vic-marca.png) center/40px 40px no-repeat;box-shadow:0 1px 3px rgba(120,50,0,.25)}
+.logo-vic{width:100%;max-width:260px;aspect-ratio:720/338;margin:4px auto 14px;background:var(--logo-vic) center/contain no-repeat}
 .top h1{font-size:19px;color:#fff;text-shadow:0 1px 2px rgba(120,50,0,.35)}
 .top .sub{font-size:13.5px;text-shadow:0 1px 2px rgba(120,50,0,.4)}
 .tema{display:inline-grid;place-items:center;flex:none;width:44px;height:44px;padding:0;border:0;border-radius:50%;background:rgba(0,0,0,.2);color:#fff}
