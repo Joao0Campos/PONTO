@@ -14,7 +14,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Ponto VIC">
 <title>Ponto VIC</title>
-<link rel="stylesheet" href="css/app.css">
+<!-- ?v=N: suba junto com o cache do sw.js a cada publicação -->
+<link rel="stylesheet" href="css/app.css?v=10">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -196,10 +197,10 @@
  <div class="sheet-rod"><div class="acoes"><button class="btn" value="x">Cancelar</button><button class="btn pri" id="impOk" type="button">Importar</button></div></div>
 </form></dialog>
 
-<script src="js/core.js"></script>
-<script src="js/importar.js"></script>
-<script src="js/cartao.js"></script>
-<script src="js/app.js"></script>
+<script src="js/core.js?v=10"></script>
+<script src="js/importar.js?v=10"></script>
+<script src="js/cartao.js?v=10"></script>
+<script src="js/app.js?v=10"></script>
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{})</script>
 </body>
 </html>
