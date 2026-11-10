@@ -9,7 +9,7 @@
 
   const B = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
   const CENTRO = { vertical: 'middle', horizontal: 'center' };
-  const COLS = ['A', 'B', 'C', 'D', 'E', 'F'];
+  const COLS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
   const VAZIO = '_____ : _____ ';
 
   const nomeArquivo = m => 'PONTO VIC ' + m.slice(5, 7) + m.slice(0, 4) + '.xlsx';
@@ -21,10 +21,10 @@
     const r = C.resumo(s, m, agora), ini = C.inicio(s);
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Plan1', { pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 1 } });
-    ws.columns = [{ width: 14 }, { width: 22 }, { width: 22 }, { width: 30 }, { width: 34 }, { width: 40 }];
+    ws.columns = [{ width: 14 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 }, { width: 26 }, { width: 30 }, { width: 40 }];
 
     const faixa = (row, txt, opt) => {
-      ws.mergeCells('A' + row + ':F' + row);
+      ws.mergeCells('A' + row + ':H' + row);
       const c = ws.getCell('A' + row);
       c.value = txt;
       Object.assign(c, opt || {});
@@ -36,11 +36,11 @@
     faixa(4, 'MÊS: ' + C.MESES[mo] + '/' + y, { font: { bold: true } });
     ws.getCell('A5').value = 'NOME:';
     ws.getCell('A5').font = { bold: true };
-    ws.mergeCells('B5:F5');
+    ws.mergeCells('B5:H5');
     ws.getCell('B5').value = (s.perfil && s.perfil.nome) || '';
     COLS.forEach(l => { ws.getCell(l + '5').border = B; });
 
-    ws.getRow(6).values = ['Data ', 'Horário Entrada', 'Horário Saída', 'Rubrica Funcionário', 'Localização (GPS)', 'Observação'];
+    ws.getRow(6).values = ['Data ', 'Horário Entrada', 'Saída Almoço', 'Volta Almoço', 'Horário Saída', 'Rubrica Funcionário', 'Localização (GPS)', 'Observação'];
     ws.getRow(6).eachCell(c => {
       c.font = { bold: true }; c.alignment = CENTRO; c.border = B;
       c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
@@ -49,33 +49,37 @@
     let ajustes = 0;
     for (let d = 1; d <= n; d++) {
       const k = m + '-' + C.pad(d), x = C.getDia(s, k) || C.diaVazio(), w = C.diaSemana(k), row = ws.getRow(6 + d);
-      let e = VAZIO, sa = VAZIO;
-      if (x.p.length) {
+      let e = VAZIO, as = VAZIO, av = VAZIO, sa = VAZIO;
+      const hd = iso => { const off = C.horariosDoDia(k, [iso])[0].dias; return C.horaLocal(iso) + (off > 0 ? ' (+' + off + 'd)' : ''); };
+      const q = x.p.length;
+      if (q) {
         e = C.horaLocal(x.p[0]);
-        if (x.p.length > 1) {
-          const ult = x.p[x.p.length - 1], off = C.horariosDoDia(k, [ult])[0].dias;
-          sa = C.horaLocal(ult) + (off > 0 ? ' (+' + off + 'd)' : '');
-        }
-      } else if (x.tipo) e = sa = x.tipo;
-      else if (C.feriadoAuto(s, k)) e = sa = 'FERIADO';
-      else if (w === 6) e = sa = 'SÁBADO';
-      else if (w === 0) e = sa = 'DOMINGO';
+        if (q >= 3) { as = hd(x.p[1]); av = hd(x.p[2]); }  // almoço batido: 2ª e 3ª marcações
+        else if (q === 2 && x.almoco) as = hd(x.p[1]);    // saiu para o almoço e não voltou (ainda)
+        else if (q === 2) as = av = '—';                  // só entrada e saída: almoço descontado sozinho (obs)
+        if ((q === 2 && !x.almoco) || q >= 4) sa = hd(x.p[q - 1]);
+      } else if (x.tipo) e = as = av = sa = x.tipo;
+      else if (C.feriadoAuto(s, k)) e = as = av = sa = 'FERIADO';
+      else if (w === 6) e = as = av = sa = 'SÁBADO';
+      else if (w === 0) e = as = av = sa = 'DOMINGO';
       const gs = (x.g || []).filter(Boolean);
       const obs = [];
       if (!x.p.length && !x.tipo && C.feriadoAuto(s, k)) obs.push(C.nomeFeriado(k));
+      const auto = C.almocoAuto(s, k, agora);
+      if (auto) obs.push('Almoço de ' + C.formatHM(auto) + ' descontado (sem marcação)');
       if (x.obs) obs.push(x.obs);
       if (x.ajuste) obs.push('Ajuste ' + C.formatHMsinal(x.ajuste));
       if (x.banco) obs.push('Pagando banco');
       if (x.ajuste && C.contaNoSaldo(s, k, agora, ini)) ajustes += x.ajuste;
       row.values = [
-        new Date(Date.UTC(y, mo, d)), e, sa, '',
+        new Date(Date.UTC(y, mo, d)), e, as, av, sa, '',
         gs.length ? { text: 'Ver no mapa (' + gs.length + ' marcações)', hyperlink: 'https://maps.google.com/?q=' + gs[0].lat + ',' + gs[0].lon } : '',
         obs.join(' · ')
       ];
-      row.getCell(5).font = { color: { argb: 'FFF07D00' }, underline: !!gs.length };
+      row.getCell(7).font = { color: { argb: 'FFF07D00' }, underline: !!gs.length };
       row.getCell(1).numFmt = 'dd/mm/yyyy';
       row.eachCell({ includeEmpty: true }, c => { c.border = B; c.alignment = CENTRO; });
-      row.getCell(6).alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
+      row.getCell(8).alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
     }
 
     const fim = 7 + n;

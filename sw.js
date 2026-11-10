@@ -1,4 +1,4 @@
-const C = 'ponto-vic-v10';
+const C = 'ponto-vic-v11';
 const ASSETS = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'img/vic-marca.png', 'img/vic-logo.png', 'img/vic-logo-escuro.png', 'css/app.css',
   'js/core.js', 'js/importar.js', 'js/cartao.js', 'js/app.js', 'vendor/exceljs.min.js'];
 self.addEventListener('install', e => e.waitUntil(caches.open(C).then(c => c.addAll(ASSETS.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting())));

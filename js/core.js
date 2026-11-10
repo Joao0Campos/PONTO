@@ -43,6 +43,7 @@
     const g = Array.isArray(d.g) ? d.g : [];
     d.g = d.p.map((_, i) => limparGPS(g[i]));
     d.banco = !!d.banco;
+    d.almoco = d.almoco === true && d.p.length >= 2; // a 2ª marcação foi o botão SAÍDA ALMOÇO
     d.tipo = typeof d.tipo === 'string' ? d.tipo : '';
     d.obs = typeof d.obs === 'string' ? d.obs : '';
     d.ajuste = Number.isFinite(Number(d.ajuste)) ? Math.round(Number(d.ajuste)) : 0;
@@ -216,6 +217,7 @@
     const x = getDia(s, k);
     if (!x || x.p[x.p.length - 1] !== iso) return false;
     x.p.pop(); x.g.length = x.p.length;
+    if (x.p.length < 2) x.almoco = false;
     if (!temDados(x)) delete s.meses[k.slice(0, 7)].dias[k];
     return true;
   }
@@ -237,9 +239,24 @@
   /** Almoço descontado automaticamente (min): só entrada/saída, ou só a entrada com o dia aberto ("se sair agora"). */
   function almocoAuto(s, k, agora) {
     const { x, t, contaAberto } = bruto(s, k, agora);
-    if (!x || !x.p) return 0;
+    if (!x || !x.p || x.almoco) return 0; // almoço batido pelo botão: vale o tempo real
     const soEntradaSaida = x.p.length === 2 || (x.p.length === 1 && contaAberto);
-    return soEntradaSaida && util(k) && !x.tipo && t > 360 ? (x.banco ? 60 : 90) : 0;
+    return soEntradaSaida && util(k) && !x.tipo && t > 360 ? tamanhoAlmoco(s, k) : 0;
+  }
+
+  /** Tamanho do almoço do dia (min): 1h quando paga banco, 1h30 nos outros dias. */
+  const tamanhoAlmoco = (s, k) => ((getDia(s, k) || {}).banco ? 60 : 90);
+
+  /**
+   * Previsão da volta do almoço: só enquanto a pessoa está no almoço, isto é, o dia tem Entrada e a SAÍDA ALMOÇO
+   * (botão próprio, x.almoco) e ainda não voltou.
+   * @returns {{saiu:string, almoco:number, volta:string}|null} ISOs; almoco em minutos (60 ou 90)
+   */
+  function voltaDoAlmoco(s, k) {
+    const x = getDia(s, k);
+    if (!x || !x.almoco || x.p.length !== 2) return null;
+    const saiu = new Date(x.p[1]), almoco = tamanhoAlmoco(s, k);
+    return { saiu: x.p[1], almoco, volta: new Date(saiu.getTime() + almoco * 6e4).toISOString() };
   }
 
   function trabalhado(s, k, agora) {
@@ -384,6 +401,7 @@
       obs: a.obs || b.obs || '',
       tipo: a.tipo || b.tipo || '',
       banco: a.banco === true || b.banco === true,
+      almoco: pg.almoco === true && pg.p.length >= 2, // o almoço segue as marcações que venceram
       ajuste: a.ajuste ? a.ajuste : (b.ajuste || 0)
     });
   }
@@ -431,8 +449,8 @@
   }
 
   /** Nome da marcação i num dia com n marcações (igual ao app original). */
-  function nomeMarcacao(i, n) {
-    const nomes = n <= 2 ? ['Entrada', 'Saída'] : ['Entrada', 'Saída almoço', 'Volta almoço', 'Saída'];
+  function nomeMarcacao(i, n, almoco) {
+    const nomes = n <= 2 && !almoco ? ['Entrada', 'Saída'] : ['Entrada', 'Saída almoço', 'Volta almoço', 'Saída'];
     return nomes[i] || (i % 2 ? 'Saída' : 'Entrada');
   }
 
@@ -483,7 +501,7 @@
     ultimoDiaComMarcacao, ultimoDiaImpar, diaAberto, pendentes, destinoBatida, mesclarDia, decidirBatida, removerUltima, LIMITE_ABERTO,
     validarBackup, mesclarMeses, estavel,
     pascoa, nomeFeriado, feriado, feriadoAuto,
-    previsto, almocoAuto, trabalhado, saldoDia, inicio, contaNoSaldo, resumo, mesesDoBanco, total,
+    previsto, almocoAuto, tamanhoAlmoco, voltaDoAlmoco, trabalhado, saldoDia, inicio, contaNoSaldo, resumo, mesesDoBanco, total,
     parseHM, formatHM, formatHMsinal, diasEntre, nomeMarcacao, horariosDoDia, montarMarcacoes
   };
 });

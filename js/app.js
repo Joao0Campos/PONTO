@@ -143,8 +143,11 @@
     $('clock').textContent = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
     const dtx = now.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
     $('date').textContent = dtx.charAt(0).toUpperCase() + dtx.slice(1);
-    $('bIn').hidden = open; $('bOut').hidden = !open;
-    $('bIn').disabled = open || hidratando; $('bOut').disabled = !open || hidratando;
+    // botões do almoço: SAÍDA ALMOÇO só no 1º período do dia; VOLTA ALMOÇO enquanto está no almoço
+    const podeAlmoco = open && !dest.anterior && x.p.length === 1, noAlmoco = !open && !dest.anterior && C.voltaDoAlmoco(state, k) !== null;
+    $('bIn').hidden = open || noAlmoco; $('bOut').hidden = !open; $('bAlm').hidden = !podeAlmoco; $('bVolta').hidden = !noAlmoco;
+    $('bIn').disabled = open || noAlmoco || hidratando; $('bOut').disabled = !open || hidratando;
+    $('bAlm').disabled = !podeAlmoco || hidratando; $('bVolta').disabled = !noAlmoco || hidratando;
     // o interruptor vale para o dia que a tela mostra (o dia anterior aberto, quando a SAÍDA vai fechá-lo)
     $('banco').checked = (C.getDia(state, k) || {}).banco === true;
     $('bancoRot').textContent = k === hoje ? 'Pagando banco hoje' : 'Pagando banco em ' + dataBR(k).slice(0, 5);
@@ -157,8 +160,10 @@
     renderPendentes(now);
     $('todayTit').textContent = dest.anterior ? 'Marcações de ' + dataBR(k).slice(0, 5) : 'Marcações de hoje';
     const w = C.trabalhado(state, k, now), v = C.previsto(state, k), sd = C.saldoDia(state, k, now), fer = C.feriadoAuto(state, k);
+    const va = !open && !dest.anterior && !hidratando ? C.voltaDoAlmoco(state, k) : null;
     let st;
     if (hidratando) st = 'Sincronizando…';
+    else if (va) st = 'No almoço desde ' + hora(va.saiu);
     else if (open) st = 'Trabalhando há ' + durHM((now - new Date(x.p[x.p.length - 1])) / 6e4);
     else if (x.p.length) st = 'Fora desde ' + hora(x.p[x.p.length - 1]);
     else if (x.tipo) st = x.tipo.charAt(0) + x.tipo.slice(1).toLowerCase();
@@ -167,7 +172,10 @@
     else st = 'Sem marcação hoje';
     $('status').textContent = st;
     const alm = open ? C.almocoAuto(state, k, now) : 0;
-    $('hProg').textContent = (v ? hm(w) + ' de ' + hm(v) : hm(w) + ' trabalhadas') + (alm ? ' · almoço de ' + durHM(alm) + ' descontado' : '');
+    const atraso = va ? (now - new Date(va.volta)) / 6e4 : 0;
+    $('hProg').textContent = va
+      ? (atraso < 1 ? 'Volte às ' + hora(va.volta) + ' (almoço de ' + durHM(va.almoco) + ')' : 'Volta prevista às ' + hora(va.volta) + ' · passou ' + durHM(atraso))
+      : (v ? hm(w) + ' de ' + hm(v) : hm(w) + ' trabalhadas') + (alm ? ' · almoço de ' + durHM(alm) + ' descontado' : '');
     const frac = v ? Math.min(1, w / v) : (w > 0 ? 1 : 0), anel = $('anel');
     $('anelProg').style.strokeDashoffset = (CIRC * (1 - frac)).toFixed(2);
     anel.classList.toggle('cheio', v > 0 && w >= v);
@@ -178,9 +186,10 @@
     $('hSaldo').className = 'chip ' + sinal(sd);
     $('hPrev').textContent = v ? 'Jornada ' + hm(v) + (x.banco ? ' · banco' : '') : 'Sem jornada prevista';
     const offs = C.horariosDoDia(k, x.p);
-    let h = x.p.length ? x.p.map((t, i) => '<div class="tl"><span class="dot' + (i % 2 ? ' out' : '') + '"></span><span class="n">' + C.nomeMarcacao(i, x.p.length) +
+    let h = x.p.length ? x.p.map((t, i) => '<div class="tl"><span class="dot' + (i % 2 ? ' out' : '') + '"></span><span class="n">' + C.nomeMarcacao(i, x.p.length, x.almoco) +
       '</span><span class="t">' + linkGPS(x.g && x.g[i]) + hora(t) + (offs[i].dias > 0 ? ' <span class="tag mais1">+' + offs[i].dias + ' dia</span>' : '') + '</span></div>').join('')
       : '<div class="vazio">Nenhuma marcação hoje. Toque em ENTRADA para começar.</div>';
+    if (va) h += '<div class="tl total prevista"><span class="dot vazio-dot"></span><span class="n">Volta almoço (prevista)</span><span class="t">' + hora(va.volta) + '</span></div>';
     if (x.ajuste) h += '<div class="tl total"><span class="n">Ajuste</span><span class="t">' + C.formatHMsinal(x.ajuste) + '</span></div>';
     if (x.obs) h += '<div class="tl total"><span class="n">' + esc(x.obs) + '</span></div>';
     setHTML($('today'), h);
@@ -238,17 +247,19 @@
   }
 
   let ultimoToque = null; // ms da última batida aceita (trava de toque duplo)
-  function bater(acao) {
+  /** @param almoco true nos botões SAÍDA ALMOÇO e VOLTA ALMOÇO (a regra de entrada/saída é a mesma). */
+  function bater(acao, almoco) {
     if (hidratando) { aviso('Aguarde: sincronizando com a nuvem…'); return; }
     const n = new Date(), dec = C.decidirBatida(state, n, acao, ultimoToque);
     if (!dec.ok) { render(); return; } // toque repetido (< 1,5 s) ou botão que não vale para o estado atual
     ultimoToque = n.getTime();
-    const k = dec.destino.k, m = k.slice(0, 7), x = C.dia(state, k), iso = n.toISOString(), rotulo = acao === 'entrada' ? 'Entrada' : 'Saída';
+    const k = dec.destino.k, m = k.slice(0, 7), x = C.dia(state, k), iso = n.toISOString(), rotulo = (acao === 'entrada' ? (almoco ? 'Volta almoço' : 'Entrada') : (almoco ? 'Saída almoço' : 'Saída'));
     x.p.push(iso); x.g.push(null);
+    if (almoco && acao === 'saida') x.almoco = true;
     salvar([m]); render();
     mostrarDesfazer(k, iso, rotulo + ' às ' + hora(iso) + (dec.destino.anterior ? ' · fechou o dia ' + dataBR(k).slice(0, 5) : ''));
     vibrar(35);
-    const novo = $(acao === 'entrada' ? 'bOut' : 'bIn');
+    const novo = ['bIn', 'bAlm', 'bOut', 'bVolta'].map($).find(b => !b.hidden) || $('bIn');
     novo.classList.remove('bateu'); void novo.offsetWidth; novo.classList.add('bateu');
     if (!navigator.geolocation) { aviso('GPS indisponível neste aparelho.'); return; }
     aviso('Obtendo localização…');
@@ -263,6 +274,8 @@
   }
   $('bIn').onclick = () => bater('entrada');
   $('bOut').onclick = () => bater('saida');
+  $('bAlm').onclick = () => bater('saida', true);
+  $('bVolta').onclick = () => bater('entrada', true);
   $('pendLista').onclick = e => { const b = e.target.closest('button[data-k]'); if (b) abrirEditor(b.dataset.k); };
   $('pendTodos').onclick = () => { verTodosPend = !verTodosPend; renderPendentes(new Date()); };
   /** Chave do dia que a tela Hoje mostra: o dia aberto anterior quando a próxima SAÍDA vai fechá-lo; senão hoje. */
@@ -316,7 +329,7 @@
         if (x.ajuste) tags.push('<span class="tag aj' + (x.ajuste < 0 ? ' neg' : '') + '">AJUSTE ' + C.formatHMsinal(x.ajuste) + '</span>');
         const offs = C.horariosDoDia(k, x.p), ult = x.p.length - 1;
         const horas = x.p.length ? hora(x.p[0]) + ' – ' + (x.p.length > 1 ? hora(x.p[ult]) + (offs[ult].dias > 0 ? ' (+' + offs[ult].dias + 'd)' : '') : (pend.has(k) ? 'sem saída' : 'em aberto')) +
-          (x.p.length > 2 ? ' · ' + x.p.length + ' marcações' : '') : (fer && !x.tipo ? C.nomeFeriado(k) : 'Sem marcação');
+          (x.p.length === 4 ? ' · almoço ' + hora(x.p[1]) + '–' + hora(x.p[2]) : x.p.length > 2 ? ' · ' + x.p.length + ' marcações' : '') : (fer && !x.tipo ? C.nomeFeriado(k) : 'Sem marcação');
         h += '<div class="day' + (k === hoje ? ' hoje' : '') + '" data-k="' + k + '" role="button" tabindex="0" aria-label="Editar ' + dataBR(k) + '">' +
           '<div class="d-num"><b>' + pad(d) + '</b><span>' + esc(C.dateKey(k).toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')) + '</span></div>' +
           '<div class="d-mid"><div class="d-h">' + esc(horas) + '</div>' + (tags.length ? '<div class="d-tags">' + tags.join('') + '</div>' : '') +
@@ -370,7 +383,7 @@
   function linhasEditor(valores) {
     const n = valores.length;
     $('dMarc').innerHTML = valores.map((v, i) => {
-      const nome = C.nomeMarcacao(i, n);
+      const nome = C.nomeMarcacao(i, n, (C.getDia(state, ed.k) || {}).almoco);
       return '<div class="mrow" data-i="' + i + '"><label for="dm' + i + '">' + nome + '</label>' +
         '<div class="cmp"><input type="time" id="dm' + i + '" value="' + esc(v) + '"><span class="mais1 tag" hidden></span><span class="mgps"></span></div>' +
         '<button type="button" class="btn ico rm" data-i="' + i + '" aria-label="Remover ' + nome + '"><svg aria-hidden="true"><use href="#i-x"/></svg></button></div>';
@@ -382,7 +395,7 @@
     const ant = C.getDia(state, ed.k) || C.diaVazio();
     const mont = C.montarMarcacoes(ed.k, horariosEditor(), ed.pAnt, ed.gAnt);
     const aTxt = $('dAjuste').value.trim(), aj = aTxt ? C.parseHM(aTxt) : 0;
-    const d = Object.assign({}, ant, { p: mont.p, g: mont.g, tipo: $('dTipo').value, banco: $('dBanco').checked, obs: $('dObs').value.trim(), ajuste: aj === null ? 0 : aj });
+    const d = Object.assign({}, ant, { p: mont.p, g: mont.g, almoco: ant.almoco === true && mont.p.length >= 2, tipo: $('dTipo').value, banco: $('dBanco').checked, obs: $('dObs').value.trim(), ajuste: aj === null ? 0 : aj });
     return { d, mont, ajusteInvalido: aj === null };
   }
   function previaEditor() {
