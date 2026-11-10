@@ -155,6 +155,7 @@ input[type=time],input[type=date]{font-variant-numeric:tabular-nums}
 .tl .n{flex:1;font-weight:600}
 .tl .t{display:flex;align-items:center;gap:4px;font-weight:700;font-size:16px}
 .tl.total .n{color:var(--mut)}
+.versao{font-weight:700;font-variant-numeric:tabular-nums}
 .tl .dot.vazio-dot{background:transparent;border:2px dashed var(--mut);box-shadow:none;width:10px;height:10px;box-sizing:border-box}
 .tl.prevista .t{color:var(--mut);font-weight:600}
 .vazio{padding:10px 0;color:var(--mut);font-size:14px}

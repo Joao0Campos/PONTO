@@ -671,6 +671,9 @@
 
   // ---------- início ----------
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => { }); } catch (e) { /* ignora */ }
+  // versão = o ?v= com que o index.html carregou este app.js (o mesmo número do cache do sw.js)
+  try { $('versao').textContent = 'Versão ' + (new URL(document.querySelector('script[src*="js/app.js"]').src).searchParams.get('v') || '?'); }
+  catch (e) { $('versao').textContent = 'Versão ?'; }
   preencherCfg();
   render();
   setInterval(renderHoje, 1000);

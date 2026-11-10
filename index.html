@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-title" content="Ponto VIC">
 <title>Ponto VIC</title>
 <!-- ?v=N: suba junto com o cache do sw.js a cada publicação -->
-<link rel="stylesheet" href="css/app.css?v=11">
+<link rel="stylesheet" href="css/app.css?v=12">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -144,9 +144,10 @@
   <h2 class="grupo">Sobre</h2>
   <div class="card mut peq sobre">
    <div class="logo-vic" role="img" aria-label="VIC Engenharia"></div>
-   <p>Segunda a sexta, 08:00–18:00. Almoço de 1h30 → 8h30 por dia; pagando banco (almoço de 1h) → 9h00. Com só 2 marcações no dia, o almoço é descontado automaticamente. Sábado, domingo e feriado trabalhados contam inteiros como extra.</p>
+   <p>Segunda a sexta, 08:00–18:00. Almoço de 1h30 → 8h30 por dia; pagando banco (almoço de 1h) → 9h00. Com SAÍDA ALMOÇO e VOLTA ALMOÇO vale o almoço real; com só entrada e saída, o almoço é descontado automaticamente. Sábado, domingo e feriado trabalhados contam inteiros como extra.</p>
    <p>Saldo do dia = trabalhado − previsto + ajuste.</p>
    <p id="sync"></p>
+   <p id="versao" class="versao"></p>
   </div>
  </section>
 </main>
@@ -200,10 +201,10 @@
  <div class="sheet-rod"><div class="acoes"><button class="btn" value="x">Cancelar</button><button class="btn pri" id="impOk" type="button">Importar</button></div></div>
 </form></dialog>
 
-<script src="js/core.js?v=11"></script>
-<script src="js/importar.js?v=11"></script>
-<script src="js/cartao.js?v=11"></script>
-<script src="js/app.js?v=11"></script>
+<script src="js/core.js?v=12"></script>
+<script src="js/importar.js?v=12"></script>
+<script src="js/cartao.js?v=12"></script>
+<script src="js/app.js?v=12"></script>
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{})</script>
 </body>
 </html>
